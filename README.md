@@ -8,6 +8,6 @@ The goal of this project is to learn an agent to play the game Tetris. The code 
 - torch
 
 # Tetris game
-The code for the Tetris game is from the repository "tetris-pygame" from the author **Rajat Dipta Biswas**.
+The orignal code for the Tetris game is from the repository "tetris-pygame" from the author **Rajat Dipta Biswas**.
 
 [Repo Link](https://github.com/rajatdiptabiswas/tetris-pygame)

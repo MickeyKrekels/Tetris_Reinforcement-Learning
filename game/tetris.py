@@ -18,8 +18,13 @@ top_left_x = (s_width - play_width) // 2
 top_left_y = s_height - play_height - 50
 
 filepath = 'highscore.txt'
-fontpath = './font/arcade.ttf'
-fontpath_mario = './font/mario.ttf'
+font_path_arcade = './font/arcade.ttf'
+font_path_mario = './font/mario.ttf'
+
+arcade_font = pygame.font.SysFont(font_path_arcade, 30, bold=True)
+mario_font = pygame.font.SysFont(font_path_mario, 65, bold=True)
+
+SPEED = 2
 
 # shapes formats
 
@@ -206,8 +211,7 @@ def get_shape():
 
 # draws text in the middle
 def draw_text_middle(text, size, color, surface):
-    font = pygame.font.SysFont(fontpath, size, bold=False, italic=True)
-    label = font.render(text, 1, color)
+    label = arcade_font.render(text, 1, color)
 
     surface.blit(label, (top_left_x + play_width/2 - (label.get_width()/2), top_left_y + play_height/2 - (label.get_height()/2)))
 
@@ -261,8 +265,7 @@ def clear_rows(grid, locked):
 
 # draws the upcoming piece
 def draw_next_shape(piece, surface):
-    font = pygame.font.SysFont(fontpath, 30)
-    label = font.render('Next shape', 1, (255, 255, 255))
+    label = arcade_font.render('Next shape', 1, (255, 255, 255))
 
     start_x = top_left_x + play_width + 50
     start_y = top_left_y + (play_height / 2 - 100)
@@ -285,14 +288,12 @@ def draw_window(surface, grid, score=0, last_score=0):
     surface.fill((0, 0, 0))  # fill the surface with black
 
     pygame.font.init()  # initialise font
-    font = pygame.font.SysFont(fontpath_mario, 65, bold=True)
-    label = font.render('TETRIS', 1, (255, 255, 255))  # initialise 'Tetris' text with white
+    label = mario_font.render('TETRIS', 1, (255, 255, 255))  # initialise 'Tetris' text with white
 
     surface.blit(label, ((top_left_x + play_width / 2) - (label.get_width() / 2), 30))  # put surface on the center of the window
 
     # current score
-    font = pygame.font.SysFont(fontpath, 30)
-    label = font.render('SCORE   ' + str(score) , 1, (255, 255, 255))
+    label = arcade_font.render('SCORE   ' + str(score) , 1, (255, 255, 255))
 
     start_x = top_left_x + play_width + 50
     start_y = top_left_y + (play_height / 2 - 100)
@@ -300,7 +301,7 @@ def draw_window(surface, grid, score=0, last_score=0):
     surface.blit(label, (start_x, start_y + 200))
 
     # last score
-    label_hi = font.render('HIGHSCORE   ' + str(last_score), 1, (255, 255, 255))
+    label_hi = arcade_font.render('HIGHSCORE   ' + str(last_score), 1, (255, 255, 255))
 
     start_x_hi = top_left_x - 240
     start_y_hi = top_left_y + 200
@@ -362,9 +363,6 @@ def main(window):
     current_piece = get_shape()
     next_piece = get_shape()
     clock = pygame.time.Clock()
-    fall_time = 0
-    fall_speed = 0.35
-    level_time = 0
     score = 0
     last_score = get_max_score()
 
@@ -374,25 +372,7 @@ def main(window):
 
         # helps run the same on every computer
         # add time since last tick() to fall_time
-        fall_time += clock.get_rawtime()  # returns in milliseconds
-        level_time += clock.get_rawtime()
-
-        clock.tick()  # updates clock
-
-        if level_time/1000 > 5:    # make the difficulty harder every 10 seconds
-            level_time = 0
-            if fall_speed > 0.15:   # until fall speed is 0.15
-                fall_speed -= 0.005
-
-        if fall_time / 1000 > fall_speed:
-            fall_time = 0
-            current_piece.y += 1
-            if not valid_space(current_piece, grid) and current_piece.y > 0:
-                current_piece.y -= 1
-                # since only checking for down - either reached bottom or hit another piece
-                # need to lock the piece position
-                # need to generate new piece
-                change_piece = True
+        clock.tick(SPEED)  # updates clock
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -411,17 +391,16 @@ def main(window):
                     if not valid_space(current_piece, grid):
                         current_piece.x -= 1
 
-                elif event.key == pygame.K_DOWN:
-                    # move shape down
-                    current_piece.y += 1
-                    if not valid_space(current_piece, grid):
-                        current_piece.y -= 1
-
                 elif event.key == pygame.K_UP:
                     # rotate shape
                     current_piece.rotation = current_piece.rotation + 1 % len(current_piece.shape)
                     if not valid_space(current_piece, grid):
                         current_piece.rotation = current_piece.rotation - 1 % len(current_piece.shape)
+
+        current_piece.y += 1
+        if not valid_space(current_piece, grid) and current_piece.y > 0:
+            current_piece.y -= 1
+            change_piece = True
 
         piece_pos = convert_shape_format(current_piece)
 
@@ -461,7 +440,7 @@ def main_menu(window):
     run = True
     while run:
         main(window)
-        
+
     pygame.quit()
 
 

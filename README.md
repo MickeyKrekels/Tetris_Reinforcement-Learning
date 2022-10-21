@@ -6,3 +6,8 @@ The goal of this project is to learn an agent to play the game Tetris. The code 
 - Keras
 - numpy
 - torch
+
+# Tetris game
+The code for the Tetris game is from the repository "tetris-pygame" from the author **Rajat Dipta Biswas**.
+
+[Repo Link](https://github.com/rajatdiptabiswas/tetris-pygame)

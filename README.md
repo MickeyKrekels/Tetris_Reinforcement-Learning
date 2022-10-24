@@ -4,8 +4,8 @@ The goal of this project is to learn an agent to play the game Tetris. The code 
 ### libaries used:
 - Pygame 
 - Keras
-- numpy
-- torch
+- Numpy
+- Torch
 
 # Tetris game
 The orignal code for the Tetris game is from the repository "tetris-pygame" from the author **Rajat Dipta Biswas**.

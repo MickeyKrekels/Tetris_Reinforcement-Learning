@@ -1,6 +1,8 @@
 import random
 import pygame
 from pathlib import Path
+import numpy as np
+
 
 pygame.font.init()
 
@@ -24,7 +26,10 @@ font_path_mario = './font/mario.ttf'
 arcade_font = pygame.font.SysFont(font_path_arcade, 30, bold=True)
 mario_font = pygame.font.SysFont(font_path_mario, 65, bold=True)
 
-SPEED = 40
+REWARD_REWARD_POINTS = 15
+REWARD_ERROR_POINTS = -10
+
+SPEED = 7
 
 # shapes formats
 
@@ -356,13 +361,71 @@ class Game:
 
         return score
 
-    def step_agent(self):
-        grid = self.create_grid(self.locked_positions)
+    def agent_step(self, action):
+        self.grid = self.create_grid(self.locked_positions)
         self.clock.tick(SPEED)
 
-        return
+        # move
+        if np.array_equal(action, [1, 0, 0]): # move x position left
+            self.current_piece.x -= 1  
+            if not self.valid_space(self.current_piece, self.grid):
+                self.current_piece.x += 1            
 
-    def step_player(self):
+        elif np.array_equal(action, [0, 1, 0]): # move x position right
+             self.current_piece.x += 1 
+             if not self.valid_space(self.current_piece, self.grid):
+                 self.current_piece.x -= 1
+        else: # rotate shape
+            self.current_piece.rotation = self.current_piece.rotation + 1 % len(self.current_piece.shape)
+            if not self.valid_space(self.current_piece, self.grid):
+                self.current_piece.rotation = self.current_piece.rotation - 1 % len(self.current_piece.shape)  
+
+        # move shape 1 cell down
+        piece_pos = self.convert_shape_format(self.current_piece)
+        self.current_piece.y += 1
+        if not self.valid_space(self.current_piece, self.grid) and self.current_piece.y > 0:
+            self.current_piece.y -= 1
+            self.change_piece = True
+
+        # draw the piece 
+        for i in range(len(piece_pos)):
+            x, y = piece_pos[i]
+            if y >= 0:
+                self.grid[y][x] = self.current_piece.color
+
+        # flags 
+        reward = 0
+        if self.change_piece:  # if the piece is locked
+            for pos in piece_pos:
+                p = (pos[0], pos[1])
+                self.locked_positions[p] = self.current_piece.color      
+            self.current_piece = self.next_piece
+            self.next_piece = self.get_shape()
+            self.change_piece = False
+            row_cleared = self.clear_rows(self.grid, self.locked_positions) * 10 
+
+            if row_cleared > 0:
+                reward += REWARD_REWARD_POINTS
+
+            self.score += row_cleared  # increment score by 10 for every row cleared
+            self.update_score(self.score)
+
+            if self.last_score < self.score:
+                self.last_score = self.score
+
+        self.draw_window(self.window, self.grid, self.score, self.last_score)
+        self.draw_next_shape(self.next_piece, self.window)
+        pygame.display.update()
+
+        game_over = False
+
+        if self.check_lost(self.locked_positions):
+            reward = REWARD_ERROR_POINTS
+            game_over = True      
+
+        return reward, game_over , self.score
+
+    def player_step(self):
         self.grid = self.create_grid(self.locked_positions)
         self.clock.tick(SPEED)
 
@@ -431,11 +494,11 @@ class Game:
 def main():
     game = Game()
 
-
     while True:
-        gameover, score = game.step_player()
+        gameover, score = game.player_step()
 
         if gameover:
+            print(score)
             break
 
     pygame.time.delay(2000)  # wait for 2 seconds

@@ -9,7 +9,7 @@ python ./game/tetris.py
 To train the agent execute the following line
 ```
 python ./RL-agent/main.py
-``
+```
 
 ### libaries used:
 - Pygame 

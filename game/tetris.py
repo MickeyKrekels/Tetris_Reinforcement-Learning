@@ -1,6 +1,7 @@
 import random
 import pygame
 from pathlib import Path
+from enum import Enum
 import numpy as np
 
 
@@ -8,8 +9,6 @@ pygame.font.init()
 
 # global variables
 
-col = 10  # 10 columns
-row = 20  # 20 rows
 s_width = 800  # window width
 s_height = 750  # window height
 play_width = 300  # play window width; 300/10 = 30 width per block
@@ -26,10 +25,11 @@ font_path_mario = './font/mario.ttf'
 arcade_font = pygame.font.SysFont(font_path_arcade, 30, bold=True)
 mario_font = pygame.font.SysFont(font_path_mario, 65, bold=True)
 
-REWARD_REWARD_POINTS = 15
+REWARD_REWARD_POINTS = 40
+REWARD_REWARD_TOPFRAME_POINTS = 10
 REWARD_ERROR_POINTS = -10
 
-SPEED = 7
+SPEED = 80
 
 # shapes formats
 
@@ -135,6 +135,7 @@ T = [['.....',
       '..0..',
       '.....']]
 
+
 # index represents the shape
 shapes = [S, Z, I, O, J, L, T]
 shape_colors = [(0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 255, 0), (255, 165, 0), (0, 0, 255), (128, 0, 128)]
@@ -143,47 +144,45 @@ shape_colors = [(0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 255, 0), (255, 16
 # class to represent each of the pieces
 
 class Piece(object):
-    def __init__(self, x, y, shape):
+    def __init__(self, x, y, shape,color,rotation = 0):
         self.x = x
         self.y = y
         self.shape = shape
-        self.color = shape_colors[shapes.index(shape)]  # choose color from the shape_color list
-        self.rotation = 0  # chooses the rotation according to index
+        self.color =  color # choose color from the shape_color list
+        self.rotation = rotation  # chooses the rotation according to index
 
+class Direction(Enum):
+    LEFT = 1
+    RIGHT = 2
+    UP = 3
 
 class Game:
     def __init__(self, w=s_width, h=s_height):
         self.w = w
         self.h = h
-        self.locked_positions = {}
-        self.create_grid(self.locked_positions)
-        self.clock = pygame.time.Clock()
-
-        self.current_piece = self.get_shape()
-        self.next_piece = self.get_shape()
-
-        # flags
-        self.change_piece = False 
-        self.score = 0
-        self.last_score = self.get_max_score()
+        self.col = 10  # 10 columns
+        self.row = 20  # 20 rows
+        self.frame = 0
+        self.frame_record = 0
         self.window = pygame.display.set_mode((s_width, s_height))
         pygame.display.set_caption('Tetris')
+        self.clock = pygame.time.Clock()
+        self.reset_game()
 
 # initialise the grid
     def create_grid(self,locked_pos={}):
-        grid = [[(0, 0, 0) for x in range(col)] for y in range(row)]  # grid represented rgb tuples
+        grid = [[(0, 0, 0) for x in range(self.col)] for y in range(self.row)]  # grid represented rgb tuples
 
         # locked_positions dictionary
         # (x,y):(r,g,b)
-        for y in range(row):
-            for x in range(col):
+        for y in range(self.row):
+            for x in range(self.col):
                 if (x, y) in locked_pos:
                     color = locked_pos[
                         (x, y)]  # get the value color (r,g,b) from the locked_positions dictionary using key (x,y)
                     grid[y][x] = color  # set grid position to color
 
         return grid
-
 
     def convert_shape_format(self,piece):
         positions = []
@@ -203,7 +202,7 @@ class Game:
     # checks if current position of piece in grid is valid
     def valid_space(self,piece, grid):
         # makes a 2D list of all the possible (x,y)
-        accepted_pos = [[(x, y) for x in range(col) if grid[y][x] == (0, 0, 0)] for y in range(row)]
+        accepted_pos = [[(x, y) for x in range(self.col) if grid[y][x] == (0, 0, 0)] for y in range(self.row)]
         # removes sub lists and puts (x,y) in one list; easier to search
         accepted_pos = [x for item in accepted_pos for x in item]
 
@@ -225,7 +224,9 @@ class Game:
 
     # chooses a shape randomly from shapes list
     def get_shape(self):
-        return Piece(5, 0, random.choice(shapes))
+        shape = random.choice(shapes)
+        color = shape_colors[shapes.index(shape)] 
+        return Piece(5, 0, shape,color)
 
     # draws text in the middle
     def draw_text_middle(self,text, color, surface):
@@ -238,11 +239,11 @@ class Game:
         r = g = b = 0
         grid_color = (r, g, b)
 
-        for i in range(row):
+        for i in range(self.row):
             # draw grey horizontal lines
             pygame.draw.line(surface, grid_color, (top_left_x, top_left_y + i * block_size),
                              (top_left_x + play_width, top_left_y + i * block_size))
-            for j in range(col):
+            for j in range(self.col):
                 # draw grey vertical lines
                 pygame.draw.line(surface, grid_color, (top_left_x + j * block_size, top_left_y),
                                  (top_left_x + j * block_size, top_left_y + play_height))
@@ -313,16 +314,30 @@ class Game:
         surface.blit(label, (start_x, start_y + 200))
 
         # last score
-        label_hi = arcade_font.render('HIGHSCORE   ' + str(last_score), 1, (255, 255, 255))
+        label_hi = arcade_font.render('HIGHSCORE: ' + str(last_score), 1, (255, 255, 255))
 
-        start_x_hi = top_left_x - 240
-        start_y_hi = top_left_y + 200
+        start_x_hi = top_left_x - 245
+        start_y_hi = top_left_y + 580
 
-        surface.blit(label_hi, (start_x_hi + 20, start_y_hi + 200))
+        label_fr = arcade_font.render('FRAMES: ' + str(self.frame), 1, (255, 255, 255))
+
+        start_x_fr = top_left_x - 245
+        start_y_fr = top_left_y + 50
+
+        
+        label_frrec = arcade_font.render('FRAMES BEST: ' + str(self.frame_record), 1, (255, 255, 255))
+
+        start_x_frrec = top_left_x - 245
+        start_y_frrec = top_left_y + 100
+
+        surface.blit(label_hi, (start_x_hi, start_y_hi))
+        surface.blit(label_fr, (start_x_fr, start_y_fr))
+        surface.blit(label_frrec, (start_x_frrec, start_y_frrec))
+
 
         # draw content of the grid
-        for i in range(row):
-            for j in range(col):
+        for i in range(self.row):
+            for j in range(self.col):
                 # pygame.draw.rect()
                 # draw a rectangle shape
                 # rect(Surface, color, Rect, width=0) -> Rect
@@ -362,28 +377,29 @@ class Game:
         return score
 
     def agent_step(self, action):
+        pygame.event.get()
+
+        self.frame += 1
         self.grid = self.create_grid(self.locked_positions)
         self.clock.tick(SPEED)
 
-        # move
         if np.array_equal(action, [1, 0, 0]): # move x position left
-            self.current_piece.x -= 1  
-            if not self.valid_space(self.current_piece, self.grid):
-                self.current_piece.x += 1            
+            self.direction = Direction.LEFT          
 
         elif np.array_equal(action, [0, 1, 0]): # move x position right
-             self.current_piece.x += 1 
-             if not self.valid_space(self.current_piece, self.grid):
-                 self.current_piece.x -= 1
+            self.direction = Direction.RIGHT
+        
         else: # rotate shape
-            self.current_piece.rotation = self.current_piece.rotation + 1 % len(self.current_piece.shape)
-            if not self.valid_space(self.current_piece, self.grid):
-                self.current_piece.rotation = self.current_piece.rotation - 1 % len(self.current_piece.shape)  
+            self.direction = Direction.UP
+
+        self.move_piece(self.direction)
+
 
         # move shape 1 cell down
         piece_pos = self.convert_shape_format(self.current_piece)
         self.current_piece.y += 1
-        if not self.valid_space(self.current_piece, self.grid) and self.current_piece.y > 0:
+
+        if self.Check_if_placed(self.current_piece, self.grid):
             self.current_piece.y -= 1
             self.change_piece = True
 
@@ -420,18 +436,22 @@ class Game:
         game_over = False
 
         if self.check_lost(self.locked_positions):
-            reward = REWARD_ERROR_POINTS
-            game_over = True      
+            game_over = True 
+            if self.frame_record < self.frame:
+                self.frame_record = self.frame
+                reward += REWARD_REWARD_TOPFRAME_POINTS
+            else:          
+                reward += REWARD_ERROR_POINTS
 
         return reward, game_over , self.score
 
     def player_step(self):
         self.grid = self.create_grid(self.locked_positions)
         self.clock.tick(SPEED)
+        self.frame += 1
 
         for event in pygame.event.get(): # gets player input
             if event.type == pygame.QUIT:
-                run = False
                 pygame.display.quit()
                 quit()
 
@@ -455,7 +475,7 @@ class Game:
         piece_pos = self.convert_shape_format(self.current_piece)
 
         self.current_piece.y += 1
-        if not self.valid_space(self.current_piece, self.grid) and self.current_piece.y > 0:
+        if self.Check_if_placed(self.current_piece, self.grid):
             self.current_piece.y -= 1
             self.change_piece = True
 
@@ -465,6 +485,7 @@ class Game:
             if y >= 0:
                 self.grid[y][x] = self.current_piece.color
 
+        reward = 0
         if self.change_piece:  # if the piece is locked
             for pos in piece_pos:
                 p = (pos[0], pos[1])
@@ -472,11 +493,17 @@ class Game:
             self.current_piece = self.next_piece
             self.next_piece = self.get_shape()
             self.change_piece = False
-            self.score += self.clear_rows(self.grid, self.locked_positions) * 10    # increment score by 10 for every row cleared
+            row_cleared = self.clear_rows(self.grid, self.locked_positions) * 10 
+
+            if row_cleared > 0:
+                reward += REWARD_REWARD_POINTS
+
+            self.score += row_cleared  # increment score by 10 for every row cleared
             self.update_score(self.score)
 
             if self.last_score < self.score:
                 self.last_score = self.score
+                
 
         self.draw_window(self.window, self.grid, self.score, self.last_score)
         self.draw_next_shape(self.next_piece, self.window)
@@ -485,24 +512,59 @@ class Game:
         game_over = False
 
         if self.check_lost(self.locked_positions):
-            print("Game over")
-            game_over = True      
+            game_over = True 
+            if self.frame_record < self.frame:
+                self.frame_record = self.frame
+                reward += REWARD_REWARD_TOPFRAME_POINTS
+            else:          
+                reward += REWARD_ERROR_POINTS     
 
-        return game_over , self.score
+        return reward ,game_over , self.score
+
+    def reset_game(self):
+        # saves record frame 
+        self.frame = 0
+
+        self.locked_positions = {}
+        self.grid = self.create_grid(self.locked_positions)
+
+        self.current_piece = self.get_shape()
+        self.next_piece = self.get_shape()
+
+        # flags
+        self.change_piece = False 
+        self.score = 0
+        self.last_score = self.get_max_score()
+        # set direction
+        self.direction = Direction.UP
+
+    def move_piece(self,direction):
+        if direction == Direction.LEFT: # move x position left
+            self.current_piece.x -= 1  
+            if not self.valid_space(self.current_piece, self.grid):
+                self.current_piece.x += 1            
+
+        elif direction == Direction.RIGHT: # move x position right
+             self.current_piece.x += 1 
+             if not self.valid_space(self.current_piece, self.grid):
+                 self.current_piece.x -= 1
+        else: # rotate shape
+            self.current_piece.rotation = self.current_piece.rotation + 1 % len(self.current_piece.shape)
+            if not self.valid_space(self.current_piece, self.grid):
+                self.current_piece.rotation = self.current_piece.rotation - 1 % len(self.current_piece.shape) 
+        
+    def Check_if_placed(self,pos,grid):
+        return not self.valid_space(pos,grid) and pos.y > 0
+
 
 
 def main():
     game = Game()
 
     while True:
-        gameover, score = game.player_step()
-
+        reward ,gameover, score = game.player_step()
         if gameover:
-            print(score)
-            break
-
-    pygame.time.delay(2000)  # wait for 2 seconds
-    pygame.quit()
+            game.reset_game()
 
 
 if __name__ == '__main__':

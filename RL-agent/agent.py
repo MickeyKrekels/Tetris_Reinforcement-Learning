@@ -7,13 +7,18 @@ import torch
 import sys
 
 sys.path.append("..")
-from game.tetris import Piece, shapes
+from game.tetris import Piece,Direction ,shapes
 
 
 MAX_MEMORY = 100_000
 BATCH_SIZE = 1000
 LR = 0.001
 
+ONE_CELL = [['.....',
+            '.....',
+            '..0..',
+            '.....',
+            '.....']]
 
 class Agent:
     def __init__(self,model_path = ''):
@@ -21,46 +26,44 @@ class Agent:
         self.epsilon = 0
         self.gamma = 0.9 
         self.memory = deque(maxlen=MAX_MEMORY) 
-        self.model = Linear_QNet(11, 256, 3)
+        self.model = Linear_QNet(210, 1024 , 3)
+        
         if model_path != '':
             self.model = self.load_model(model_path)
             
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
     
-    def get_state(self,game,offset_check = 10):
-        point_l = Point(pos.x - offset_check, pos.y)
-        point_r = Point(pos.x + offset_check, pos.y)
-        point_u = Point(pos.x, pos.y - offset_check)
-        point_d = Point(pos.x, pos.y + offset_check)
+    def get_state(self,game):
+        piece = game.current_piece
+
+        dir_l = game.direction == Direction.LEFT 
+        dir_r = game.direction == Direction.RIGHT 
+        dir_u = game.direction == Direction.UP
         
-        dir_l = game.direction == Direction.EAST 
-        dir_r = game.direction == Direction.WEST 
-        dir_u = game.direction == Direction.NORTH
-        dir_d = game.direction == Direction.SOUTH
         
         # this array are all the possible states and the agent will choose the best action 
         state = [ 
 
-            # #---gives the agent an indication of where the boundary is by sampling the environment around the head location---#
-            # (dir_r and game.check_collision(point_r)) or # Danger straight
-            # (dir_l and game.check_collision(point_l)) or 
-            # (dir_u and game.check_collision(point_u)) or 
-            # (dir_d and game.check_collision(point_d)),
-            # (dir_u and game.check_collision(point_r)) or # Danger right
-            # (dir_d and game.check_collision(point_l)) or 
-            # (dir_l and game.check_collision(point_u)) or 
-            # (dir_r and game.check_collision(point_d)),
-            # (dir_d and game.check_collision(point_r)) or # Danger left
-            # (dir_u and game.check_collision(point_l)) or 
-            # (dir_r and game.check_collision(point_u)) or 
-            # (dir_l and game.check_collision(point_d)),
-            
-            # # Move direction
-            # dir_l,dir_r,dir_u,dir_d,       
-            
+            # showes the agent the posible shapes available 
+            shapes[0] == piece.shape,
+            shapes[1] == piece.shape,
+            shapes[2] == piece.shape,
+            shapes[3] == piece.shape,
+            shapes[4] == piece.shape,
+            shapes[5] == piece.shape,
+            shapes[6] == piece.shape,
 
+            # Move direction
+            dir_l,dir_r,dir_u,
 
             ]
+
+        for x in range(game.col):
+            for y in range(game.row):
+                cell = Piece(x, y, ONE_CELL,(255,255,255))
+                state.append(game.Check_if_placed(cell,game.grid))
+
+        # 210 values 
         
         return np.array(state, dtype=int)
 

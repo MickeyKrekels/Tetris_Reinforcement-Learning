@@ -1,8 +1,7 @@
 import sys
-import pygame
 
 sys.path.append("..")
-from  game.tetris import Game
+from game.tetris import Game
 from agent import Agent
 
 
@@ -15,7 +14,6 @@ def train(model = ''):
 
     while True:
         # get old state
-        game.frame += 1
         state_old = agent.get_state(game)
 
         # get move
@@ -43,11 +41,11 @@ def train(model = ''):
 
             total_score += score
             mean_score = total_score / agent.n_games
-            print('Game', agent.n_games, 'Score', score , 'Record:', record, 'Mean Score:', mean_score)
+            print('Game', agent.n_games,'Reward', reward,' | ', 'Score', score , 'Record:', record, 'Mean Score:', mean_score)
 
 
 if __name__ == '__main__':
-    train()
+        train()
 
 
 

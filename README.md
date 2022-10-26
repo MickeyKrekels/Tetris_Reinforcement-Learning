@@ -1,5 +1,15 @@
-# Tetris_Reinforcement-Learning
+# Tetris Reinforcement-Learning
 The goal of this project is to learn an agent to play the game Tetris. The code language that is going to be used is Python.
+
+To use the game with **player controls** execute the following line:
+```
+python ./game/tetris.py
+```
+
+To train the **agent** execute:
+```
+python ./RL-agent/main.py
+```
 
 ### libaries used:
 - Pygame 
